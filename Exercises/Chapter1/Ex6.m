@@ -14,10 +14,16 @@ plot([0,A_p(1)],[0,A_p(2)])
 %% Function definition
 
 function A_p = HT(AB_R, AB_0, B_p)
-AB_T = eye(4);
-AB_T(1:3, 1:3) = AB_R;
-AB_T(4, 1:3) = AB_0;
-P = [B_p(1), B_p(2), B_p(3), 1]';
+dof = length(AB_R);
+AB_T = eye(dof + 1);
+AB_T(1:dof, 1:dof) = AB_R;
+AB_T(dof + 1, 1:dof) = AB_0;
+P = [];
+for i = 1:dof
+    P(i) = B_p(i);
+end
+P(dof + 1) = 1;
+P = P';
 A_p = linsolve(AB_T, P);
 end
 
