@@ -1,10 +1,11 @@
 %% Function definition
-classdef transformation_operator
+classdef transformation_operator < dynamicprops
     properties
         AB_R
         AB_0
         B_p
     end
+    
     methods
         % constructor method
         function obj = transformation_operator(AB_R, AB_0, B_p)
@@ -14,6 +15,12 @@ classdef transformation_operator
                 obj.B_p = B_p;
             else
                 error('Please input AB_R, AB_0 and B_p');
+            end
+        end
+        
+        function obj = add_A_p(A_p)
+            if nargin == 1
+                obj.A_p = A_p;
             end
         end
         
@@ -32,10 +39,47 @@ classdef transformation_operator
             P(dof + 1) = 1;
             P = P';
             A_p = AB_T * P;
-            disp(AB_T);
-            disp(P);
-            disp(A_p);
+            obj.addprop('A_p');
+            obj.A_p = A_p;
         end
+        
+        function plot_vectors(obj)
+            AB_R = obj.AB_R;
+            AB_0 = obj.AB_0;
+            B_p = obj.B_p;
+            A_p = obj.A_p;
+            hold on
+            q = quiver(0,0,AB_0(1),AB_0(2),0);
+            q.Color = 'red';
+            q.LineStyle = '--';
+            q.ShowArrowHead = 'off';
+            q = quiver(AB_0(1),AB_0(2),B_p(1),B_p(2),0);
+            q.Color = 'red';
+            q.LineStyle = '--';
+            q.ShowArrowHead = 'off';
+            q = quiver(0,0,AB_0(1)+B_p(1),AB_0(2)+B_p(2),0);
+            q.Color = 'black';
+            q.MaxHeadSize = 0.1;
+            
+            
+            q = quiver(0,0,AB_0(1),AB_0(2),0);
+            q.Color = 'red';
+            q.LineStyle = '--';
+            q.ShowArrowHead = 'off';
+            q = quiver(AB_0(1),AB_0(2),A_p(1) - AB_0(1),A_p(2) - AB_0(2),0);
+            q.Color = 'red';
+            q.LineStyle = '--';
+            q.ShowArrowHead = 'off';
+            q = quiver(0,0,A_p(1),A_p(2),0);
+            q.Color = 'black';
+            q.MaxHeadSize = 0.1;
+            hold off
+            %plot([0,1], [0,2]);
+            %plot([1,3],[2,5]);
+            %plot([0,3],[0,5]);
+            %lot([0,A_p(1)],[0,A_p(2)]);
+        end
+        
         
     end
 end
