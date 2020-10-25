@@ -6,10 +6,10 @@
 
 % the function has been created within the file transformation_operator you
 % this file just tests it
-obj = transformation_operator;
+obj = transformation_operator([cosd(30), -sind(30), 0; sind(30), cosd(30), 0; 0, 0, 1], [1,2,3], [2,3,3]);
 
 % run function
-A_p = obj.HT([cosd(30), -sind(30), 0; sind(30), cosd(30), 0; 0, 0, 1], [1,2,3], [2,3,3]);
+A_p = obj.HT();
 
 %% for testing purpose
 hold on
