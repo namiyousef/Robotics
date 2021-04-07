@@ -1,0 +1,19 @@
+syms theta1 theta3 L1 d2 L3 Le pi phi
+% first goes alpha, then a, then d, then theta!
+dh = sym([...
+    0, 0, 0, theta1; ...
+    pi/2 - phi, 0, L1 + d2, 0; ...
+    phi - pi/2, Le, L3, theta3 ... 
+    ]);
+
+T_forward = 1;
+for i = 1:size(dh)
+    T = sym([...
+        cos(dh(i,4)), -sin(dh(i,4)), 0, dh(i,2); ...
+        sin(dh(i,4))*cos(dh(i,1)), cos(dh(i,4))*cos(dh(i,1)), -sin(dh(i,1)), -sin(dh(i,1))*dh(i,3)
+        sin(dh(i,4))*sin(dh(i,1)), cos(dh(i,4))*sin(dh(i,1)), cos(dh(i,1)), cos(dh(i,1))*dh(i,3)
+        0, 0, 0, 1
+        ]);
+    T_final = T_final *T;
+end
+T_forward
