@@ -14,6 +14,6 @@ for i = 1:size(dh)
         sin(dh(i,4))*sin(dh(i,1)), cos(dh(i,4))*sin(dh(i,1)), cos(dh(i,1)), cos(dh(i,1))*dh(i,3)
         0, 0, 0, 1
         ]);
-    T_final = T_final *T;
+    T_forward = T_forward *T;
 end
 T_forward
