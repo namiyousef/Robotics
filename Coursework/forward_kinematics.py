@@ -3,7 +3,7 @@ import numpy as np
 import sympy as sym
 import re
 from sympy.parsing.sympy_parser import stringify_expr
-
+# TODO see if parse_expr actually behaves better than this!
 def remove_whitespace(string):
     return re.sub(r"\s+", "", string)
 
@@ -68,18 +68,45 @@ def main(dh_params = None):
         for T in T_matrices:
             T_forward *= T
 
-        #print(T_forward)
-        T_inverse = create_transformation_matrix(find_rotation_matrix(yaw = 'theta3'), ['x', 'y', 'z'])
+        T_inverse = create_transformation_matrix(find_rotation_matrix(yaw = 'psi').T, ['x', 'y', 'z'])
+
+        omegas = []
+        vels = []
+        omega = sym.Matrix([0, 0 ,0])
+        vel = sym.Matrix([0, 0, 0])
+        for i, joint in enumerate(dh_params):
+            alpha, a, d, theta = joint
+
+
+            if theta == 0:
+                pass
+                # this is a prismatic joint
+
+                #omegas.append()
+                #vels.append()
+            else:
+                # this is revolute
+                R = T_matrices[0][:3, :3].T  # need to transpose, because we are going in the opposite direction!
+                t = sym.Symbol('t')
+                # TODO does not work programmatically! Unless you can be sure of the coordinates and axes
+                # and where they belong!
+                # looks like you're blocked atm!
+                vel = R*(vel + omega.cross())
+                vels.append()
+
+                omega = R*omega + sym.Matrix([0, 0, sym.Derivative(theta, t)])
+                omegas.append(omega)
+
+
+        # TODO this part does not work at all, so skipped for now!
         eqns = [sym.simplify(exp1 - exp2) for exp1, exp2 in zip(T_forward, T_inverse) if sym.simplify(exp1 - exp2) != 0]
-        eqn_str = [str(eqn) for eqn in eqns]
-        counts = [sum([int(var in eqn) for var in ['theta1', 'd2', 'theta3']]) for eqn in eqn_str]
+        vars = ['theta1', 'd2', 'theta3']
+
+        # TODO add object oriented approach where solution first seen, then user can specify  next calculations
+
         # TODO not very smart!
         # TODO need to think of a smart method to do this!
 
-        for eqn, count in zip(eqn_str, counts):
-            if count == 1:
-                for var in ['theta1', 'd2', 'theta3']:
-                    print(sym.solve(eqn, var))
         # TODO need to save var that is being saved!
         # THEN use simultaneous! SHOULD not be TOO hard!
         #print(sym.solve(eqns, (theta1, d2, theta3)))
@@ -136,7 +163,12 @@ def define_sympy_vars(var):
     return sym.Symbol(var)
     # needs to return the variables as namespaces?
 def create_rot_matrix(rotation, angle):
-    """ takes an angle as a sumpy symbol, OR integer! DOES NOT ACCEPT STR"""
+    """ takes an angle as a sumpy symbol, OR integer! DOES NOT ACCEPT STR
+
+    NOte:
+        these are rotation matrices designed to shift a coordinate axis, NOT a point
+        when using them for points, make sure you apply the transpose operator
+        """
     if rotation not in ['yaw', 'pitch', 'roll']:
         raise ValueError('You must have either yaw pitch or roll. Other rotatinos are not accepted')
     elif rotation == 'yaw':
