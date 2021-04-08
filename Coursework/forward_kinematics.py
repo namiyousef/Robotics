@@ -2,6 +2,7 @@ import plac
 import numpy as np
 import sympy as sym
 import re
+from sympy.parsing.sympy_parser import stringify_expr
 
 def remove_whitespace(string):
     return re.sub(r"\s+", "", string)
@@ -67,9 +68,21 @@ def main(dh_params = None):
         for T in T_matrices:
             T_forward *= T
 
-        print(T_forward)
+        #print(T_forward)
         T_inverse = create_transformation_matrix(find_rotation_matrix(yaw = 'theta3'), ['x', 'y', 'z'])
-        print(T_inverse)
+        eqns = [sym.simplify(exp1 - exp2) for exp1, exp2 in zip(T_forward, T_inverse) if sym.simplify(exp1 - exp2) != 0]
+        eqn_str = [str(eqn) for eqn in eqns]
+        counts = [sum([int(var in eqn) for var in ['theta1', 'd2', 'theta3']]) for eqn in eqn_str]
+        # TODO not very smart!
+        # TODO need to think of a smart method to do this!
+
+        for eqn, count in zip(eqn_str, counts):
+            if count == 1:
+                for var in ['theta1', 'd2', 'theta3']:
+                    print(sym.solve(eqn, var))
+        # TODO need to save var that is being saved!
+        # THEN use simultaneous! SHOULD not be TOO hard!
+        #print(sym.solve(eqns, (theta1, d2, theta3)))
         # rule based solver? maybe you need simultaneous equations??
         # given joint variables, needs to solve the equations?
         # maybe can isolate joint variables to find the simplest ones? starting
