@@ -63,10 +63,15 @@ def main(dh_params = None):
                     #dh_params[i, j] = eval(col)
 
         #print(dh_params)
+        for item in dh_params:
+            print(type(item))
         T_matrices = [dh_transformer(joint) for joint in dh_params]
+        print(T_matrices[0])
         T_forward = 1
         for T in T_matrices:
             T_forward *= T
+            print(T_forward)
+
 
         T_inverse = create_transformation_matrix(find_rotation_matrix(yaw = 'psi').T, ['x', 'y', 'z'])
 
