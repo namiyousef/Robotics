@@ -1,5 +1,5 @@
 function T = LT(DH)
-    a = DH(1); alpha = DH(2); d = DH(3); theta = DH(4);
+    a = DH(2); alpha = DH(1); d = DH(3); theta = DH(4);
     T = sym('a%d%d', [4,4]);
     
     T(1,1) = cos(theta); T(1,2) = -sin(theta); T(1,3) = 0; T(1,4) = a;
