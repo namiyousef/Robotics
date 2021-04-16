@@ -5,7 +5,19 @@ classdef transformation_operator < dynamicprops
         AB_0
         B_p
     end
-    
+    methods (Static)
+        function quiver_plot_deets(q,type)
+            if type == 'minor'
+                q.Color = 'red';
+                q.LineStyle = '--';
+                q.ShowArrowHead = 'off';
+            else if type == 'major'
+                q.Color = 'black';
+                q.MaxHeadSize = 0.1;
+                end
+            end
+        end
+    end
     methods
         % constructor method
         function obj = transformation_operator(AB_R, AB_0, B_p)
@@ -50,34 +62,21 @@ classdef transformation_operator < dynamicprops
             A_p = obj.A_p;
             hold on
             q = quiver(0,0,AB_0(1),AB_0(2),0);
-            q.Color = 'red';
-            q.LineStyle = '--';
-            q.ShowArrowHead = 'off';
+            obj.quiver_plot_deets(q,'minor');
             q = quiver(AB_0(1),AB_0(2),B_p(1),B_p(2),0);
-            q.Color = 'red';
-            q.LineStyle = '--';
-            q.ShowArrowHead = 'off';
+            obj.quiver_plot_deets(q,'minor');
             q = quiver(0,0,AB_0(1)+B_p(1),AB_0(2)+B_p(2),0);
-            q.Color = 'black';
-            q.MaxHeadSize = 0.1;
-            
-            
+            obj.quiver_plot_deets(q,'major');
+
             q = quiver(0,0,AB_0(1),AB_0(2),0);
-            q.Color = 'red';
-            q.LineStyle = '--';
-            q.ShowArrowHead = 'off';
+            obj.quiver_plot_deets(q,'minor');
             q = quiver(AB_0(1),AB_0(2),A_p(1) - AB_0(1),A_p(2) - AB_0(2),0);
-            q.Color = 'red';
-            q.LineStyle = '--';
-            q.ShowArrowHead = 'off';
+            obj.quiver_plot_deets(q,'minor');
             q = quiver(0,0,A_p(1),A_p(2),0);
-            q.Color = 'black';
-            q.MaxHeadSize = 0.1;
+            obj.quiver_plot_deets(q,'major');
+
             hold off
-            %plot([0,1], [0,2]);
-            %plot([1,3],[2,5]);
-            %plot([0,3],[0,5]);
-            %lot([0,A_p(1)],[0,A_p(2)]);
+
         end
         
         
