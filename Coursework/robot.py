@@ -88,7 +88,8 @@ class manipulator(visualiser):
         for q_param, q_ in q_params.items():
             q_min, q_max = q_constraints[q_param]
             if q_ < q_min or q_ > q_max:
-                raise ValueError('The point you have entered is outside the workspace.')
+                raise ValueError(f'The point {x} is outside the workspace because {q_param} is {q_}, and thus outside [{q_min}, {q_max}]')
+        return x
 
     def define_parameter_dict(self, x, x_labels):
         return {
@@ -96,10 +97,15 @@ class manipulator(visualiser):
         }
 
     def solve_for_q(self, x, m_params):
+        """
+        Given Cartesian (x) and manipulator (m) parameters, finds values of q (joint parameters)
+        """
         q_params = {}
         for q_, q_rel in self.joint_param_relations.items():
+            # joint_param_relations is the ik expressions, ordered (i.e. d2, theta1, theta3)
             sol = sym.solve(q_rel.subs(x).subs(m_params).subs(q_params))[0]
-            q_params[q_] = sol
+            # can call multiple subs for each parameter! So can keep them independent
+            q_params[q_] = sol # updates q_params, can be used in next iteration
         return q_params
 
     # TODO this stuff is incomplete
@@ -218,20 +224,33 @@ def main(path_to_config, x0, xf, timedelta, n_points):
 
 
 if __name__ == '__main__':
-    plac.call(main)
+    #plac.call(main)
+
+    # define the manipulator and the dimensions of the robot
     m = manipulator({
-                      'Le': 1,
+                      'Le': 1, # in the background, these variables are defined
                       'L1': 1,
                       'alpha': sym.pi / 4,
                       'L3':1
-                  })
+                  },x_labels = ['x', 'y', 'z', 'phi', 'theta', 'psi']
+                    # x_labels defines the variable names that the user is using for
+                    # cartesian parameters. In this case, phi, theta, psi are used
+                    # for roll, pitch and yaw
+    )
 
-
-    r1 = revolute(['0', '0', '0', 'theta1'], 'theta1', constraint = [0, sym.pi/2])
+    # define the joints
+    r1 = revolute(['0', '0', '0', 'theta1'],
+                  'theta1', # this specifies the joint parameter for this joint
+                  constraint = [-sym.pi/2, 0])
     p1 = prismatic(['sym.pi/2 - alpha', '0', 'L1+d2', '0'], 'd2')
-    r2 = revolute(['-sym.pi/2 + alpha', '0', 'L3', 'theta3'], 'theta3', constraint = [-sym.pi/2, sym.pi/2])
+    r2 = revolute(['-sym.pi/2 + alpha', '0', 'L3', 'theta3'],
+                  'theta3', constraint = [-sym.pi/2, sym.pi/2])
+    # define end effector as a 'joint', not prismatic or revolute
     end_effector = joint(['0', 'Le', '0', '0'])
+
+    # add the joints to the manipulator
     m.add_joints([r1, p1, r2, end_effector])
+
     m.calculate_forward_kinematics()
     ik = m.calculate_inverse_kinematics(['x','y','z'], yaw = '-psi')
     #m.equate_fk_ik(ik)
@@ -247,7 +266,8 @@ if __name__ == '__main__':
                       'L1': 1,
                       'alpha': sym.pi / 4,
                       'L3':1
-                  }
+                  },
+                  #via = [[1,-1,2.1,0,0,0], [1,-0.9,1.8,0,0,0]]
                   )
 
     print(m.check_in_workspace([1,-1,2,0,0,0]))
