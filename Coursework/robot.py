@@ -3,6 +3,7 @@ import sympy as sym
 from parse_tools import define_sympy_vars, convert_to_sympy, remove_whitespace
 from pprint import pprint
 from plotting_tools import visualiser
+import plac
 # TODO add plotting of the individual components of q
 # TODO add plotting of the acceleration and velcoity of the end effector
 # TODO add plotting for qdot, qddot
@@ -41,8 +42,8 @@ class manipulator(visualiser):
                  base_loc = [0,0,0],
                  x_labels = ['x', 'y', 'z', 'phi', 'theta', 'psi'],
                  ):
-
-        self.m_params = m_params
+        self.m_params = {
+            m_label : eval(m_) if isinstance(m_, str) else m_ for m_label, m_ in m_params.items()}
         self.x_labels = x_labels
         self.locs = [self.generate_point(base_loc)]
         self.joints = []
@@ -193,16 +194,38 @@ class prismatic(joint):
         self.q_param = q_param
         self.constraint = constraint
 
+@plac.annotations(
+    path_to_config=('Path to configuration file', 'positional', None, str),
+    x0=('initial position', 'positional', None, list),
+    xf=('final position', 'positional', None, list),
+    timedelta=('Time for movement', 'positional', None, int),
+    n_points=('Number of points', 'positional',None, int)
+)
+def main(path_to_config, x0, xf, timedelta, n_points):
+    import json
+    print(path_to_config, x0, xf, timedelta, n_points)
+    config = json.load(open(path_to_config, 'r'))
+    m = manipulator(config['manipulator_params'])
+    joints = []
+    for joint_ in config['joints']:
+        if joint_['type'] == 'r':
+            joints.append(revolute(joint_['dh'], joint_['q'], constraint = joint_['constraint']))
+        elif joint_['type'] =='p':
+            joints.append(prismatic(joint_['dh'], joint_['q'], constraint = joint_['constraint']))
+        else:
+            joints.append(joint(joint_['dh']))
 
 
 
 if __name__ == '__main__':
+    plac.call(main)
     m = manipulator({
                       'Le': 1,
                       'L1': 1,
                       'alpha': sym.pi / 4,
                       'L3':1
                   })
+
 
     r1 = revolute(['0', '0', '0', 'theta1'], 'theta1', constraint = [0, sym.pi/2])
     p1 = prismatic(['sym.pi/2 - alpha', '0', 'L1+d2', '0'], 'd2')
@@ -211,7 +234,7 @@ if __name__ == '__main__':
     m.add_joints([r1, p1, r2, end_effector])
     m.calculate_forward_kinematics()
     ik = m.calculate_inverse_kinematics(['x','y','z'], yaw = '-psi')
-    m.equate_fk_ik(ik)
+    #m.equate_fk_ik(ik)
     m.add_joint_param_relations(
         "d2 = -L1 + (z-L3)/sym.sin(alpha)",
         "theta1 = sym.asin((x - Le*sym.cos(psi))/((L1+d2)*sym.cos(alpha)))",
