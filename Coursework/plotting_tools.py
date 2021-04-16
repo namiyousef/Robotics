@@ -43,6 +43,8 @@ class visualiser(interpolations):
         if parametrizer == 'cubic':
             qi, qdoti, qddoti = self.cubic_interpolator(*Q, t, timedelta)
 
+
+        self.plot_joint_params(t, qi, qdoti, qddoti)
         # TODO what does this location refer to?
         axis_loc = sym.Matrix([0,0,0,1])
 
@@ -51,10 +53,6 @@ class visualiser(interpolations):
             [4, len(self.T_forwards)]
         )
         fig, ax = plt.subplots()
-
-        """        fig = plt.figure()
-        ax = fig.gca(projection='3d')"""
-
         for i in range(n_points):
             T = 1
             for j, color in enumerate(['tab:blue', 'tab:orange', 'tab:green', 'tab:red']):
@@ -65,16 +63,25 @@ class visualiser(interpolations):
                 axis_locs.append(
                     tuple(p for p in P[:-1])
                 )
-                points = np.asarray(axis_locs[j-1:]).T
                 ax.plot(*axis_locs[-1][:-1], '.', c = color)
 
                 all_points[:,j] = np.asarray(P).reshape(-1)
-                # plot axes
-                ax.plot(*all_points[:-2, j-1:j+1], 'black', linewidth = 0.2)
-
-
+                ax.plot(*all_points[:-2, j-1:j+1], 'black', linewidth = 0.2, label = '__nolegend__')
 
         # TODO fix this, currently not looking very great!
+        plt.show()
+
+    def plot_joint_params(self, t, qi, qdoti, qddoti, colors = ['tab:blue', 'tab:orange', 'tab:green'], labels = ['theta1', 'd2', 'theta3']):
+        fig, axes = plt.subplots(nrows = 3)
+        Q = [qi, qdoti, qddoti]
+        plt.suptitle('Joint parameter plots against time')
+        for q,ax,label in zip(Q, axes, ['values', 'velocities', 'accelerations']):
+            for q_ in q:
+                ax.plot(t, q_)
+                ax.set_ylabel(f'parameter {label}')
+
+        plt.legend(labels)
+
         plt.show()
             # TODO find the joint parameters
             # parametrize them using the relevant function
