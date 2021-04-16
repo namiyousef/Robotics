@@ -7,7 +7,21 @@ import math
 # TODO find good design practices! I'm not convinced that it's correct that
 # the self's here refer to values from manipulator?
 
-class visualiser:
+class interpolations:
+    def cubic_interpolator(self, q0, qf, t, td):
+        a0 = q0
+        a1 = 0
+        a2 = (3 / (td ** 2)) * (qf - q0)
+        a3 = -(2 / (td ** 3)) * (qf - q0)
+        qi = a0 + a1 * t + a2 * t ** 2 + a3 * t ** 3
+        # TODO qdoti and qddoti are incorrecti
+        qdoti = a1 + 2 * a2 * t + 3 * a3 * t ** 2
+        qddoti = 2 * a2 + 6 * a3 * t
+        return qi, qdoti, qddoti
+
+    def linear_parabolic(self, ):
+        pass
+class visualiser(interpolations):
 
     def plot_motion(self, x0, xf, timedelta, n_points, manipulator_params, via = [], parametrizer = 'cubic'):
         """ x are cartesian parameters, they contain angles too!"""
@@ -56,7 +70,6 @@ class visualiser:
 
                 all_points[:,j] = np.asarray(P).reshape(-1)
                 # plot axes
-                print(all_points[:-2, j-1:j+1])
                 ax.plot(*all_points[:-2, j-1:j+1], 'black', linewidth = 0.2)
 
 
@@ -127,3 +140,8 @@ class visualiser:
 
             fig = go.Figure(data=data, layout=layout)
             fig.show()
+        # TODO incomplete
+        def generate_workspace(self, constraints):
+            # TODO generate a meshgrid from constraints
+            # TODO use inverse kinematics to generate the workspace
+            pass
