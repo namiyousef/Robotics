@@ -19,14 +19,23 @@ class interpolations:
         qddoti = 2 * a2 + 6 * a3 * t
         return qi, qdoti, qddoti
 
+
     def linear_parabolic(self, ):
         pass
 class visualiser(interpolations):
 
-    def plot_motion(self, x0, xf, timedelta, n_points, manipulator_params, via = [], parametrizer = 'cubic'):
+    def plot_motion(self, x0, xf, timedelta, n_points, manipulator_params, via = [], via_calculation = "heuristic",parametrizer = 'cubic'):
         """ x are cartesian parameters, they contain angles too!"""
         # TODO add code for via points
-        X = [x0, via, xf] if via else [x0, xf]
+        X = [x0, *via, xf] if via else [x0, xf]
+        X = [self.check_in_workspace(x) for x in X]
+
+
+        # TODO via points not implemented!
+        # TODO this is a higher level time function, at the end the intervals need to be split too!
+        #t = np.linspace(0, timedelta, len(X))
+
+
         for x in X:
             if len(x) != 6:
                 raise TypeError(f'Your Cartesian parameters must be {self.x_labels}')
@@ -34,11 +43,27 @@ class visualiser(interpolations):
         X_params = [self.define_parameter_dict(x, self.x_labels) for x in X]
 
         Q_params = [self.solve_for_q(x, self.m_params) for x in X_params]
+
+
+
         Q_labels = list(Q_params[-1].keys())
 
-        t = np.linspace(0, timedelta, n_points)
 
         Q = [np.asarray(list(Q_param.values())).reshape(-1,1) for Q_param in Q_params]
+        """if len(X) > 2:
+            # calculates the extra conditions on the via points
+            V = np.zeros([len(Q), len(Q[0])])
+            print(Q)
+            for i, q in enumerate(Q):
+                # TODO do this in a smart way?
+                if not (i == 0 or i == len(X) -1):
+                    print(Q[i-1], q, Q[i+1], (q - Q[i-1]), Q[i+1] - q)
+                    V[i] = np.where((q - Q[i-1]) * (Q[i+1] - q) < 1, 0, ((q - Q[i-1]) + (Q[i+1] - q))/(t[i] - t[i-1])).reshape(-1)
+                    # TODO need to double check if correct!"""
+
+
+
+        t = np.linspace(0, timedelta, n_points)
 
         if parametrizer == 'cubic':
             qi, qdoti, qddoti = self.cubic_interpolator(*Q, t, timedelta)
@@ -52,11 +77,28 @@ class visualiser(interpolations):
         all_points = np.zeros(
             [4, len(self.T_forwards)]
         )
+
+
+
+
         fig, ax = plt.subplots()
+        fig2, axes = plt.subplots(nrows = 3)
+        vels_ = []
+        accs_ = []
+        locs_ = []
         for i in range(n_points):
             T = 1
+
             for j, color in enumerate(['tab:blue', 'tab:orange', 'tab:green', 'tab:red']):
                 q_temp = {label : val for label, val in zip(Q_labels, qi[:,i])}
+
+
+
+
+
+
+
+
                 T *= self.T_forwards[j].subs(q_temp).subs(manipulator_params)
                 # TODO need to improve this portion of the code, make more consistent and nice?
                 P = T * axis_loc
@@ -68,10 +110,46 @@ class visualiser(interpolations):
                 all_points[:,j] = np.asarray(P).reshape(-1)
                 ax.plot(*all_points[:-2, j-1:j+1], 'black', linewidth = 0.2, label = '__nolegend__')
 
+            # remember, you only do this for FINAL point!
+            # TODO this is jacobian change it make more adaptable
+            j_, jdot_ = self.my_jacobian(qi[:, i], qdoti[:, i])
+            vels = np.dot(j_, qdoti[:, i])
+            vels_.append(vels)
+            plot = 0
+            if plot:
+                ax.plot(*axis_locs[-1][:-1], '.', c='tab:red')
+                try:
+                    ax.quiver(float(axis_locs[-1][:-1][0]),
+                               float(axis_locs[-1][:-1][1]),
+                               float(vels[0]),
+                               float(vels[1]), scale = 5,  linewidths = 1)
+
+
+                    print(vels[0],'\n', vels[2])
+                    print('=============')
+                    print(
+                               float(vels[0]),'\n',
+                               float(vels[2]))
+
+                except:
+
+                    print(float(vels[0]))
+                    return
+
+            accs = np.dot(jdot_, qdoti[:, i]) + np.dot(j_, qddoti[:, i])
+            accs_.append(accs)
+            locs_.append(axis_locs[-1][:-1])
+
+        print(locs_)
+        print(t)
+        modulus = lambda a : a[0]**2 + a[1]**2
+        axes[0].plot(t, [modulus(loc_) for loc_ in locs_], 'o-', c = 'tab:red')
+        axes[1].plot(t, [modulus(loc_) for loc_ in vels_], 'o-', c = 'tab:red')
+        axes[2].plot(t, [modulus(loc_) for loc_ in accs_], 'o-', c = 'tab:red')
         # TODO fix this, currently not looking very great!
         plt.show()
 
-    def plot_joint_params(self, t, qi, qdoti, qddoti, colors = ['tab:blue', 'tab:orange', 'tab:green'], labels = ['theta1', 'd2', 'theta3']):
+    def plot_joint_params(self, t, qi, qdoti, qddoti, colors = ['tab:blue', 'tab:orange', 'tab:green'], labels = ['d2', 'theta1', 'theta3']):
         fig, axes = plt.subplots(nrows = 3)
         Q = [qi, qdoti, qddoti]
         plt.suptitle('Joint parameter plots against time')
@@ -148,7 +226,49 @@ class visualiser(interpolations):
             fig = go.Figure(data=data, layout=layout)
             fig.show()
         # TODO incomplete
-        def generate_workspace(self, constraints):
-            # TODO generate a meshgrid from constraints
-            # TODO use inverse kinematics to generate the workspace
-            pass
+    def generate_workspace(self, constraints):
+        # TODO generate a meshgrid from constraints
+        # TODO use inverse kinematics to generate the workspace
+        pass
+
+    # can you make plotting inheritance smarter? maybe interpolations or visualiser can store
+    # the values that you are interested in? instead of having to incorporate the plots inside the
+    # main plot motion function?
+    def plot_velocity(self, j):
+        pass
+
+    def plot_acceleration(self):
+        pass
+
+    def my_jacobian(self, q, qdot):
+        # these are fixed!
+        d2, theta1, theta3 = q
+        d2dot, theta1dot, theta2dot = qdot
+
+        c_phi = math.cos(math.pi/4)
+        s_phi = math.sin(math.pi/4)
+        gamma = theta1 + theta3
+        y = math.sin(gamma) - c_phi*math.sin(theta1)*(1+d2)
+        x = math.cos(gamma) + c_phi * math.sin(theta1) * (1 + d2)
+
+        j = np.array([
+            [-y, c_phi*math.sin(theta1), -math.sin(gamma)],
+            [x, -c_phi*math.cos(theta1), math.cos(gamma)],
+            [0,0,s_phi],
+            [0,0,0],
+            [0,0,0],
+            [1,0,1]
+        ])
+        gammadot = theta2dot+ theta1dot
+        xdot = np.dot(j[0], qdot)
+        ydot = np.dot(j[1], qdot)
+
+        j_2 = np.array([
+            [-ydot, theta1dot * c_phi * math.cos(theta1), -math.cos(gamma)*(gammadot)],
+            [xdot, theta1dot * c_phi * math.sin(theta1), -math.sin(gamma)*gammadot],
+            [0,0,0],
+            [0,0,0],
+            [0,0,0],
+            [0,0,0]
+        ])
+        return j, j_2
