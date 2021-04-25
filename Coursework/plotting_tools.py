@@ -8,32 +8,76 @@ import math
 # the self's here refer to values from manipulator?
 
 class interpolations:
+
     def cubic_interpolator(self, q0, qf, t, td):
         a0 = q0
         a1 = 0
         a2 = (3 / (td ** 2)) * (qf - q0)
         a3 = -(2 / (td ** 3)) * (qf - q0)
         qi = a0 + a1 * t + a2 * t ** 2 + a3 * t ** 3
-        # TODO qdoti and qddoti are incorrecti
         qdoti = a1 + 2 * a2 * t + 3 * a3 * t ** 2
         qddoti = 2 * a2 + 6 * a3 * t
         return qi, qdoti, qddoti
 
+    # TODO this is added as experimentation to test... in final case need to add init conditions
+
+    def cubic_with_via(self, q0, qf, t, td):
+        # TODO this is very messy need to clean up
+
+        pass
 
     def linear_parabolic(self, ):
         pass
-class visualiser(interpolations):
 
-    def plot_motion(self, x0, xf, timedelta, n_points, manipulator_params, via = [], via_calculation = "heuristic",parametrizer = 'cubic'):
+class cubic(interpolations):
+    def __init__(self, Q, t, td, via_calculation = "heuristic"):
+        self.Q = Q
+        self.td = td
+        self.via_calculation = via_calculation
+        """    def determine_interpolation_coefs(self):
+        if via_calculation == 'heuristic':
+            pass
+        else:
+            A = [
+                [Q[i]]
+            ]
+            a0 = q0
+            a1 = 0
+            a2 = (3 / (td ** 2)) * (qf - q0)
+            a3 = -(2 / (td ** 3)) * (qf - q0)
+            A = [a0, a1, a2, a3]"""
+
+        pass
+
+
+    def interpolate(self):
+        
+        pass
+
+
+
+
+class linear_parabolic(interpolations):
+    pass
+
+
+
+class visualiser(interpolations):
+# TODO maybe change name parametrizer to interpolator?
+
+
+    def plot_motion(self, x0, xf, timedelta, n_points, via = [], via_calculation = "heuristic", parametrizer = 'cubic'):
         """ x are cartesian parameters, they contain angles too!"""
         # TODO add code for via points
+        # TODO tmp only adds eval to ensure that all stuff converted correctly
+
         X = [x0, *via, xf] if via else [x0, xf]
+        X = [[eval(x_) if isinstance(x_, str) else x_ for x_ in x] for x in X]
         X = [self.check_in_workspace(x) for x in X]
 
 
         # TODO via points not implemented!
         # TODO this is a higher level time function, at the end the intervals need to be split too!
-        #t = np.linspace(0, timedelta, len(X))
 
 
         for x in X:
@@ -44,12 +88,10 @@ class visualiser(interpolations):
 
         Q_params = [self.solve_for_q(x, self.m_params) for x in X_params]
 
-
-
         Q_labels = list(Q_params[-1].keys())
-
-
         Q = [np.asarray(list(Q_param.values())).reshape(-1,1) for Q_param in Q_params]
+
+
         """if len(X) > 2:
             # calculates the extra conditions on the via points
             V = np.zeros([len(Q), len(Q[0])])
@@ -62,14 +104,18 @@ class visualiser(interpolations):
                     # TODO need to double check if correct!"""
 
 
-
-        t = np.linspace(0, timedelta, n_points)
+        if isinstance(timedelta, list):
+            pass
+        else:
+            t = np.linspace(0, timedelta, n_points)
 
         if parametrizer == 'cubic':
             qi, qdoti, qddoti = self.cubic_interpolator(*Q, t, timedelta)
 
 
         self.plot_joint_params(t, qi, qdoti, qddoti)
+
+
         # TODO what does this location refer to?
         axis_loc = sym.Matrix([0,0,0,1])
 
@@ -92,14 +138,7 @@ class visualiser(interpolations):
             for j, color in enumerate(['tab:blue', 'tab:orange', 'tab:green', 'tab:red']):
                 q_temp = {label : val for label, val in zip(Q_labels, qi[:,i])}
 
-
-
-
-
-
-
-
-                T *= self.T_forwards[j].subs(q_temp).subs(manipulator_params)
+                T *= self.T_forwards[j].subs(q_temp).subs(self.m_params)
                 # TODO need to improve this portion of the code, make more consistent and nice?
                 P = T * axis_loc
                 axis_locs.append(
@@ -132,7 +171,6 @@ class visualiser(interpolations):
                                float(vels[2]))
 
                 except:
-
                     print(float(vels[0]))
                     return
 
@@ -148,7 +186,23 @@ class visualiser(interpolations):
         axes[2].plot(t, [modulus(loc_) for loc_ in accs_], 'o-', c = 'tab:red')
         # TODO fix this, currently not looking very great!
         plt.show()
+        print(vels_)
+        fig3, ax3 = plt.subplots()
+        labels = ['\dot{x}','\dot{y}','\dot{z}',r'\dot{\alpha}',r'\dot{\beta}', r'\dot{\gamma}']
+        colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown']
+        for i, label, color in zip(range(len(labels)), labels, colors):
+            ax3.plot(t,[vel[i] for vel in vels_], c = color)
+        plt.legend(['$'+l+'$' for l in labels])
+        plt.show()
 
+
+        fig4, ax4 = plt.subplots()
+        labels = ['\ddot{x}', '\ddot{y}', '\ddot{z}', r'\ddot{\alpha}', r'\ddot{\beta}', r'\ddot{\gamma}']
+        colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown']
+        for i, label, color in zip(range(len(labels)), labels, colors):
+            ax4.plot(t, [vel[i] for vel in accs_], c=color)
+        plt.legend(['$' + l + '$' for l in labels])
+        plt.show()
     def plot_joint_params(self, t, qi, qdoti, qddoti, colors = ['tab:blue', 'tab:orange', 'tab:green'], labels = ['d2', 'theta1', 'theta3']):
         fig, axes = plt.subplots(nrows = 3)
         Q = [qi, qdoti, qddoti]
@@ -272,3 +326,120 @@ class visualiser(interpolations):
             [0,0,0]
         ])
         return j, j_2
+
+    def plot_motion_v2(self, x0, xf, timedelta, n_points, manipulator_params, via = [], via_calculation = "heuristic", parametrizer = 'cubic'):
+        """ x are cartesian parameters, they contain angles too!"""
+        # TODO add code for via points
+
+        X = [x0, *via, xf] if via else [x0, xf]
+        X = [self.check_in_workspace(x) for x in X]
+
+        for x in X:
+            if len(x) != 6:
+                raise TypeError(f'Your Cartesian parameters must be {self.x_labels}')
+
+        X_params = [self.define_parameter_dict(x, self.x_labels) for x in X]
+
+        Q_params = [self.solve_for_q(x, self.m_params) for x in X_params]
+
+        Q_labels = list(Q_params[-1].keys())
+        Q = [np.asarray(list(Q_param.values())).reshape(-1,1) for Q_param in Q_params]
+
+        if parametrizer == 'cubic':
+            interpolator = cubic()
+
+
+        qi, qdoti, qddoti = interpolator.interpolate()
+
+        """if len(X) > 2:
+            # calculates the extra conditions on the via points
+            V = np.zeros([len(Q), len(Q[0])])
+            print(Q)
+            for i, q in enumerate(Q):
+                # TODO do this in a smart way?
+                if not (i == 0 or i == len(X) -1):
+                    print(Q[i-1], q, Q[i+1], (q - Q[i-1]), Q[i+1] - q)
+                    V[i] = np.where((q - Q[i-1]) * (Q[i+1] - q) < 1, 0, ((q - Q[i-1]) + (Q[i+1] - q))/(t[i] - t[i-1])).reshape(-1)
+                    # TODO need to double check if correct!"""
+
+
+        if isinstance(timedelta, list):
+            pass
+        else:
+            t = np.linspace(0, timedelta, n_points)
+
+        """if parametrizer == 'cubic':
+            qi, qdoti, qddoti = self.cubic_interpolator(*Q, t, timedelta)"""
+
+
+        self.plot_joint_params(t, qi, qdoti, qddoti)
+
+
+        # TODO what does this location refer to?
+        axis_loc = sym.Matrix([0,0,0,1])
+
+        axis_locs = []
+        all_points = np.zeros(
+            [4, len(self.T_forwards)]
+        )
+
+
+
+
+        fig, ax = plt.subplots()
+        fig2, axes = plt.subplots(nrows = 3)
+        vels_ = []
+        accs_ = []
+        locs_ = []
+        for i in range(n_points):
+            T = 1
+
+            for j, color in enumerate(['tab:blue', 'tab:orange', 'tab:green', 'tab:red']):
+                q_temp = {label : val for label, val in zip(Q_labels, qi[:,i])}
+
+                T *= self.T_forwards[j].subs(q_temp).subs(manipulator_params)
+                # TODO need to improve this portion of the code, make more consistent and nice?
+                P = T * axis_loc
+                axis_locs.append(
+                    tuple(p for p in P[:-1])
+                )
+                ax.plot(*axis_locs[-1][:-1], '.', c = color)
+
+                all_points[:,j] = np.asarray(P).reshape(-1)
+                ax.plot(*all_points[:-2, j-1:j+1], 'black', linewidth = 0.2, label = '__nolegend__')
+
+            # remember, you only do this for FINAL point!
+            # TODO this is jacobian change it make more adaptable
+            j_, jdot_ = self.my_jacobian(qi[:, i], qdoti[:, i])
+            vels = np.dot(j_, qdoti[:, i])
+            vels_.append(vels)
+            plot = 0
+            if plot:
+                ax.plot(*axis_locs[-1][:-1], '.', c='tab:red')
+                try:
+                    ax.quiver(float(axis_locs[-1][:-1][0]),
+                               float(axis_locs[-1][:-1][1]),
+                               float(vels[0]),
+                               float(vels[1]), scale = 5,  linewidths = 1)
+
+
+                    print(vels[0],'\n', vels[2])
+                    print('=============')
+                    print(
+                               float(vels[0]),'\n',
+                               float(vels[2]))
+
+                except:
+                    print(float(vels[0]))
+                    return
+
+            accs = np.dot(jdot_, qdoti[:, i]) + np.dot(j_, qddoti[:, i])
+            accs_.append(accs)
+            locs_.append(axis_locs[-1][:-1])
+
+        modulus = lambda a : a[0]**2 + a[1]**2
+        axes[0].plot(t, [modulus(loc_) for loc_ in locs_], 'o-', c = 'tab:red')
+        axes[1].plot(t, [modulus(loc_) for loc_ in vels_], 'o-', c = 'tab:red')
+        axes[2].plot(t, [modulus(loc_) for loc_ in accs_], 'o-', c = 'tab:red')
+        # TODO fix this, currently not looking very great!
+        plt.show()
