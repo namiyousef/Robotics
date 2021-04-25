@@ -1,0 +1,53 @@
+{
+  "manipulator_params": {
+    "Le": 1,
+    "L1": 1,
+    "alpha": "sym.pi / 4",
+    "L3":1
+  },
+  "joints": [
+    {
+      "type":  "r",
+      "params": {
+        "dh_params": ["0", "0", "0", "theta1"],
+        "q_param": "theta1",
+        "constraint": [-1.6707, 0]
+      }
+    },
+    {
+      "type":  "p",
+      "params": {
+        "dh_params": ["sym.pi/2 - alpha", "0", "L1+d2", "0"],
+        "q_param": "d2",
+        "constraint": [0, 1]
+      }
+    },
+    {
+      "type":  "r",
+      "params": {
+        "dh_params": ["-sym.pi/2 + alpha", "0", "L3", "theta3"],
+        "q_param": "theta3",
+        "constraint": [-1.6707, 1.6707]
+      }
+    },
+    {
+      "type" : "e",
+      "params" : {
+        "dh_params" : ["0", "Le", "0", "0"]
+      }
+    }
+  ],
+  "joint_param_relations": [
+    "d2 = -L1 + (z-L3)/sym.sin(alpha)",
+    "theta1 = sym.asin((x - Le*sym.cos(psi))/((L1+d2)*sym.cos(alpha)))",
+    "theta3 = psi - theta1"
+  ],
+  "motion_params": {
+    "x0" : [1, -1, 2, 0, 0, 0],
+    "xf" : [-2, 0, 2, 0, 0, "-sym.pi"],
+    "timedelta" :3 ,
+    "n_points" : 10
+
+  }
+
+}
