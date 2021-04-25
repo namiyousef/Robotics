@@ -4,6 +4,7 @@ from parse_tools import define_sympy_vars, convert_to_sympy, remove_whitespace
 from pprint import pprint
 from plotting_tools import visualiser
 import plac
+# TODO needs a handler that will convert everything to sympy or numbers from strings!
 # TODO add plotting of the individual components of q
 # TODO add plotting of the acceleration and velcoity of the end effector
 # TODO add plotting for qdot, qddot
@@ -108,6 +109,15 @@ class manipulator(visualiser):
             q_params[q_] = sol # updates q_params, can be used in next iteration
         return q_params
 
+    def jacobian(self):
+        # TODO needs to have the joint params already defined as expressions! maybe using joint relations?
+        joints = self.joints[:-1]
+        # TODO lacks the relations for the psi, phi, theta!
+        X = self.T_FK[:-1, -1]
+        J = sym.Matrix([
+            [sym.simplify(sym.diff(x, j.q_param)) for j in joints] for x in X
+        ])
+        pprint(J)
     # TODO this stuff is incomplete
     # TODO need to add a numpy wrapper, what if we wanted to evaluate the stuff?
     def calculate_inverse_kinematics(self, p, **rotations):
@@ -208,23 +218,28 @@ class prismatic(joint):
     n_points=('Number of points', 'positional',None, int)
 )
 def main(path_to_config, x0, xf, timedelta, n_points):
+
+    # TODO add an option for x0 xf !
     import json
-    print(path_to_config, x0, xf, timedelta, n_points)
     config = json.load(open(path_to_config, 'r'))
     m = manipulator(config['manipulator_params'])
-    joints = []
-    for joint_ in config['joints']:
-        if joint_['type'] == 'r':
-            joints.append(revolute(joint_['dh'], joint_['q'], constraint = joint_['constraint']))
-        elif joint_['type'] =='p':
-            joints.append(prismatic(joint_['dh'], joint_['q'], constraint = joint_['constraint']))
-        else:
-            joints.append(joint(joint_['dh']))
+
+    joints = [revolute(**j['params']) if j['type'] == 'r' else prismatic(**j['params']) if j['type'] == 'p' else joint(**j['params']) for j in config['joints']]
+    m.add_joints(joints)
+
+    m.calculate_forward_kinematics()
+
+    m.add_joint_param_relations(
+        *config['joint_param_relations']
+    )
+
+    m.plot_motion(**config['motion_params'])
+
 
 
 
 if __name__ == '__main__':
-    #plac.call(main)
+    plac.call(main)
 
     # define the manipulator and the dimensions of the robot
     m = manipulator({
@@ -261,17 +276,21 @@ if __name__ == '__main__':
     )
 
     m.plot_motion([1,-1,2,0,0,0], [-2,0,2, 0, 0, -sym.pi], 3, 10,
-                  {
-                      'Le': 1,
-                      'L1': 1,
-                      'alpha': sym.pi / 4,
-                      'L3':1
-                  },
                   #via = [[1,-1,2.1,0,0,0], [1,-0.9,1.8,0,0,0]]
                   )
 
     print(m.check_in_workspace([1,-1,2,0,0,0]))
 
     m.plot_workspace('points', 10)
+    """m.plot_motion_v2([1, -1, 2, 0, 0, 0], [-2, 0, 2, 0, 0, -sym.pi], 3, 10,
+                  {
+                      'Le': 1,
+                      'L1': 1,
+                      'alpha': sym.pi / 4,
+                      'L3': 1
+                  },
+                  # via = [[1,-1,2.1,0,0,0], [1,-0.9,1.8,0,0,0]]
+                  )"""
+    m.jacobian()
 
 
